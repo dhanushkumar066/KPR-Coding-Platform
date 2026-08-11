@@ -6,3 +6,4 @@ dist/
 .DS_Store
 server/tmp/
 server/uploads/
+.env.local-backup
