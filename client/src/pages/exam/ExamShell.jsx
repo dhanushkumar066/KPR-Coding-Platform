@@ -18,6 +18,7 @@ import FullscreenCountdown from './FullscreenCountdown.jsx';
 import McqPanel from './McqPanel.jsx';
 import NatPanel from './NatPanel.jsx';
 import QuestionPalette, { paletteState, PALETTE_STATES } from './QuestionPalette.jsx';
+import Calculator from './Calculator.jsx';
 import Logo from '../../components/Logo.jsx';
 
 const HEARTBEAT_MS = 10_000;
@@ -113,6 +114,7 @@ export default function ExamShell() {
   const [remainingMs, setRemainingMs] = useState(null);
   const [splitPct, setSplitPct] = useState(44);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   /*
    * GATE presents a paper as sections — General Aptitude and the core subject —
@@ -797,6 +799,25 @@ export default function ExamShell() {
           </button>
 
           <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setCalcOpen((v) => !v)}
+            aria-pressed={calcOpen}
+            title="Scientific calculator"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
+              <rect x="4.5" y="3.5" width="7" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
+              <circle cx="5.5" cy="9" r="0.8" fill="currentColor" />
+              <circle cx="8" cy="9" r="0.8" fill="currentColor" />
+              <circle cx="10.5" cy="9" r="0.8" fill="currentColor" />
+              <circle cx="5.5" cy="11.8" r="0.8" fill="currentColor" />
+              <circle cx="8" cy="11.8" r="0.8" fill="currentColor" />
+              <circle cx="10.5" cy="11.8" r="0.8" fill="currentColor" />
+            </svg>
+            Calculator
+          </button>
+
+          <button
             className="btn btn-danger-solid btn-sm"
             onClick={finish}
             disabled={busy === 'finish'}
@@ -1046,6 +1067,8 @@ export default function ExamShell() {
           />
         )}
       </div>
+
+      {calcOpen && <Calculator onClose={() => setCalcOpen(false)} />}
 
       {/* GATE's action row. "Save & Next" is the button candidates reach for
           without thinking, so it exists even though everything autosaves. */}

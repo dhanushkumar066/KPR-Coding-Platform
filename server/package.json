@@ -26,7 +26,8 @@
     "migrate:style": "node src/scripts/migrateQuestionStyle.js",
     "migrate:departments": "node src/scripts/migrateDepartments.js",
     "verify:scope": "node scripts/verifyScope.js",
-    "preflight": "node scripts/preflight.js"
+    "preflight": "node scripts/preflight.js",
+    "verify:calculator": "node scripts/verifyCalculator.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",

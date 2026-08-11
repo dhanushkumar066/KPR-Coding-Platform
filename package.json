@@ -32,7 +32,8 @@
     "migrate:style": "npm run migrate:style --workspace server",
     "migrate:departments": "npm run migrate:departments --workspace server",
     "verify:scope": "npm run verify:scope --workspace server",
-    "preflight": "npm run preflight --workspace server"
+    "preflight": "npm run preflight --workspace server",
+    "verify:calculator": "npm run verify:calculator --workspace server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
