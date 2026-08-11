@@ -31,7 +31,8 @@
     "verify:gate": "npm run verify:gate --workspace server",
     "migrate:style": "npm run migrate:style --workspace server",
     "migrate:departments": "npm run migrate:departments --workspace server",
-    "verify:scope": "npm run verify:scope --workspace server"
+    "verify:scope": "npm run verify:scope --workspace server",
+    "preflight": "npm run preflight --workspace server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
