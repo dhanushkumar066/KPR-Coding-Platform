@@ -11,10 +11,14 @@ const NAV_BY_ROLE = {
     { to: '/teacher', label: 'Tests' },
     { to: '/teacher/questions', label: 'Question library' },
   ],
+  // A head of department does everything a teacher does, plus their own
+  // department's staff and results. "Users" was the old college-wide wording;
+  // a head only ever sees their own department, so the label says so.
   admin: [
     { to: '/teacher', label: 'Tests' },
     { to: '/teacher/questions', label: 'Question library' },
-    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/analytics', label: 'Department results' },
+    { to: '/admin/users', label: 'Staff' },
   ],
 };
 

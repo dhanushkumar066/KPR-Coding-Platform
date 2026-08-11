@@ -212,4 +212,123 @@ router.get(
   })
 );
 
+// ---------------------------------------------------------------------------
+// Department analytics
+// ---------------------------------------------------------------------------
+
+/**
+ * Every student, across every paper this department has run.
+ *
+ * The per-test analytics a teacher sees answers "how did this paper go". A head
+ * of department is asking a different question — "how is each student doing" —
+ * and no amount of staring at one paper at a time answers it.
+ *
+ * Scoped through the department's own staff rather than by tagging students
+ * with a department. A paper belongs to whoever set it, so a shared first-year
+ * course counts for the department that actually ran it, and a lecturer taking
+ * three branches is not a special case. Students are never tagged, because a
+ * student legitimately sits papers from several departments.
+ */
+router.get(
+  '/analytics',
+  asyncHandler(async (req, res) => {
+    const department = requireDepartment(req.user);
+
+    const staff = await User.find(staffFilter(department)).select('_id');
+    const staffIds = staff.map((s) => s._id);
+
+    const tests = await Test.find({ createdBy: { $in: staffIds } })
+      .select('title startAt createdBy')
+      .sort({ startAt: -1 });
+    const testIds = tests.map((t) => t._id);
+
+    if (!testIds.length) {
+      return res.json({ department, summary: null, students: [], tests: [] });
+    }
+
+    // Only finished attempts. A paper still in progress has no meaningful score
+    // yet, and counting it would drag every average down as students sit it.
+    const attempts = await Attempt.find({
+      test: { $in: testIds },
+      status: { $ne: 'in_progress' },
+    })
+      .select('student studentName studentEmail studentRollNumber test score maxScore submittedAt')
+      .populate('student', 'name email rollNumber');
+
+    // Per student, across every paper they sat for this department.
+    const byStudent = new Map();
+    for (const a of attempts) {
+      const key = a.student?._id?.toString() || a.studentEmail;
+      if (!key) continue;
+      if (!byStudent.has(key)) {
+        byStudent.set(key, {
+          id: key,
+          // Snapshotted on the attempt, so a later profile edit cannot rewrite
+          // who a past result belongs to.
+          name: a.studentName || a.student?.name || '',
+          email: a.studentEmail || a.student?.email || '',
+          rollNumber: a.studentRollNumber || a.student?.rollNumber || '',
+          testsTaken: 0,
+          score: 0,
+          maxScore: 0,
+          papers: [],
+        });
+      }
+      const s = byStudent.get(key);
+      s.testsTaken += 1;
+      s.score += a.score || 0;
+      s.maxScore += a.maxScore || 0;
+      s.papers.push({ test: a.test.toString(), score: a.score || 0, maxScore: a.maxScore || 0 });
+    }
+
+    const students = [...byStudent.values()]
+      .map((s) => ({
+        ...s,
+        percentage: s.maxScore ? Math.round((s.score / s.maxScore) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.percentage - a.percentage);
+
+    // Per paper, so a head can see which one went badly rather than guessing
+    // from individual results.
+    const byTest = new Map(testIds.map((id) => [id.toString(), { sat: 0, score: 0, maxScore: 0 }]));
+    for (const a of attempts) {
+      const t = byTest.get(a.test.toString());
+      if (!t) continue;
+      t.sat += 1;
+      t.score += a.score || 0;
+      t.maxScore += a.maxScore || 0;
+    }
+
+    const testRows = tests.map((t) => {
+      const agg = byTest.get(t._id.toString());
+      return {
+        id: t._id,
+        title: t.title,
+        startAt: t.startAt,
+        sat: agg.sat,
+        averagePercent: agg.maxScore ? Math.round((agg.score / agg.maxScore) * 1000) / 10 : 0,
+      };
+    });
+
+    const totalScore = students.reduce((sum, s) => sum + s.score, 0);
+    const totalMax = students.reduce((sum, s) => sum + s.maxScore, 0);
+
+    res.json({
+      department,
+      summary: {
+        tests: tests.length,
+        papersSat: attempts.length,
+        students: students.length,
+        averagePercent: totalMax ? Math.round((totalScore / totalMax) * 1000) / 10 : 0,
+        // Below 40% across everything they have sat. Named plainly rather than
+        // as a grade band, because what counts as failing is the college's
+        // decision and not this application's.
+        below40: students.filter((s) => s.maxScore > 0 && s.percentage < 40).length,
+      },
+      students,
+      tests: testRows,
+    });
+  })
+);
+
 export default router;

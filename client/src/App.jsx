@@ -16,6 +16,7 @@ import QuestionEditor from './pages/teacher/QuestionEditor.jsx';
 import GatePaperBuilder from './pages/teacher/GatePaperBuilder.jsx';
 import SubmissionViewer from './pages/teacher/SubmissionViewer.jsx';
 import AdminUsers from './pages/admin/AdminUsers.jsx';
+import AdminAnalytics from './pages/admin/AdminAnalytics.jsx';
 
 function RoleHome() {
   const { user, loading } = useAuth();
@@ -72,6 +73,14 @@ export default function App() {
           element={
             <RequireRole roles={['teacher', 'admin']}>
               <TestDetail />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <RequireRole roles={['admin']}>
+              <AdminAnalytics />
             </RequireRole>
           }
         />

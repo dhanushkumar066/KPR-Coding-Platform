@@ -114,6 +114,42 @@ export default function ExamShell() {
   const [splitPct, setSplitPct] = useState(44);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
+  /*
+   * GATE presents a paper as sections — General Aptitude and the core subject —
+   * with the candidate moving between them explicitly. Anything else is one
+   * flat list, so this only turns on when the paper actually has sections to
+   * navigate: two or more distinct names across the questions.
+   */
+  const sections = useMemo(() => {
+    const seen = [];
+    for (const q of questions) {
+      const name = (q.section || '').trim();
+      if (name && !seen.includes(name)) seen.push(name);
+    }
+    // Every question must belong to one, or a student could not reach the
+    // unsectioned ones at all once the paper is split.
+    const complete = questions.every((q) => (q.section || '').trim());
+    return complete && seen.length > 1 ? seen : [];
+  }, [questions]);
+
+  const [activeSection, setActiveSection] = useState(null);
+  const currentSection = activeSection ?? sections[0] ?? null;
+
+  // Questions in the section being viewed, keeping their original paper order.
+  const visibleQuestions = useMemo(
+    () => (currentSection ? questions.filter((q) => (q.section || '').trim() === currentSection) : questions),
+    [questions, currentSection]
+  );
+
+  // Following the active question keeps the two in step: jumping from the
+  // palette to a question in another section must switch the section too,
+  // rather than leaving the bar showing a different one.
+  useEffect(() => {
+    if (!sections.length) return;
+    const name = (questions[activeIdx]?.section || '').trim();
+    if (name && name !== currentSection) setActiveSection(name);
+  }, [activeIdx, questions, sections.length, currentSection]);
+
   const msLeft = useCountdown(remainingMs);
   const activeQuestion = questions[activeIdx];
   const activeState = activeQuestion ? editorState[activeQuestion.id] : null;
@@ -614,12 +650,52 @@ export default function ExamShell() {
           </div>
         </div>
 
+        {/* GATE's section tabs. A candidate moves between General Aptitude and
+            the core subject explicitly, and each section counts its own
+            progress — which is the number they actually watch. */}
+        {sections.length > 0 && (
+          <div className="flex items-center gap-1" role="tablist" aria-label="Sections">
+            {sections.map((name) => {
+              const inSection = questions.filter((q) => (q.section || '').trim() === name);
+              const done = inSection.filter((q) => isAnswered(q)).length;
+              const active = name === currentSection;
+              return (
+                <button
+                  key={name}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => {
+                    setActiveSection(name);
+                    // Land on the first question of the section rather than
+                    // leaving the student looking at one from the last.
+                    const first = questions.findIndex((q) => (q.section || '').trim() === name);
+                    if (first >= 0) setActiveIdx(first);
+                  }}
+                  className="rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                  style={{
+                    background: active ? 'var(--color-brand-600)' : 'transparent',
+                    color: active ? '#fff' : 'var(--text-muted)',
+                    border: `1px solid ${active ? 'var(--color-brand-600)' : 'var(--border)'}`,
+                  }}
+                  title={`${done} of ${inSection.length} answered`}
+                >
+                  {name}
+                  <span className="ml-1.5 tabular-nums opacity-75">
+                    {done}/{inSection.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Question navigator with an answered indicator */}
         <nav
           className="flex items-center gap-1.5 rounded-lg border bg-[var(--surface-2)] p-1"
           aria-label="Questions"
         >
-          {questions.map((q, i) => {
+          {visibleQuestions.map((q) => {
+            const i = questions.indexOf(q);
             // Same five states as the palette, so the bar and the panel can
             // never disagree about what a question's colour means.
             const st = stateOf(q);

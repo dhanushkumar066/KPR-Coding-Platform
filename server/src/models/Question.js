@@ -361,6 +361,8 @@ questionSchema.methods.toStudentView = function toStudentView(allowedLanguages, 
     return {
       id: this._id.toString(),
       kind: 'nat',
+      style: this.style,
+      section: this.section,
       title: this.title,
       statement: this.statement,
       difficulty: this.difficulty,
@@ -378,6 +380,8 @@ questionSchema.methods.toStudentView = function toStudentView(allowedLanguages, 
     return {
       id: this._id.toString(),
       kind: 'mcq',
+      style: this.style,
+      section: this.section,
       title: this.title,
       statement: this.statement,
       difficulty: this.difficulty,
@@ -423,6 +427,8 @@ questionSchema.methods.toStudentView = function toStudentView(allowedLanguages, 
 
   return {
     kind: 'coding',
+    style: this.style,
+    section: this.section,
     ioMode: this.ioMode,
     functionSpec:
       this.ioMode === 'function'
