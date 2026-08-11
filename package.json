@@ -1,0 +1,42 @@
+{
+  "name": "college-coding-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure college coding-examination platform (MERN)",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace client",
+    "start": "npm run start --workspace server",
+    "seed": "npm run seed --workspace server",
+    "diagnose": "npm run diagnose --workspace server",
+    "migrate:iomode": "npm run migrate:iomode --workspace server",
+    "verify:languages": "npm run verify:languages --workspace server",
+    "verify:native": "npm run verify:native --workspace server",
+    "verify:nodes": "npm run verify:nodes --workspace server",
+    "verify:seed": "npm run verify:seed --workspace server",
+    "loadtest": "npm run loadtest --workspace server",
+    "verify:compare": "npm run verify:compare --workspace server",
+    "verify:types": "npm run verify:types --workspace server",
+    "verify:classes": "npm run verify:classes --workspace server",
+    "verify:signature": "npm run verify:signature --workspace server",
+    "verify:caseinput": "npm run verify:caseinput --workspace server",
+    "verify:nat": "npm run verify:nat --workspace server",
+    "verify:palette": "npm run verify:palette --workspace server",
+    "verify:gate": "npm run verify:gate --workspace server",
+    "migrate:style": "npm run migrate:style --workspace server",
+    "migrate:departments": "npm run migrate:departments --workspace server",
+    "verify:scope": "npm run verify:scope --workspace server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

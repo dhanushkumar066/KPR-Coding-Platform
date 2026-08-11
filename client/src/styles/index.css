@@ -1,0 +1,591 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Design tokens — KPR Institute's identity.
+
+   The blue ramp is anchored on the institute blue (#1F4E9C at 600) and the
+   green on the institute green, both taken from the college logo. Only layout
+   conventions are borrowed from existing judges; the palette is our own.
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-brand-50: #eff4fd;
+  --color-brand-100: #d8e2ff;
+  --color-brand-200: #b8ccfa;
+  --color-brand-300: #8dabf0;
+  --color-brand-400: #5b85dd;
+  --color-brand-500: #3465bd;
+  --color-brand-600: #1f4e9c;
+  --color-brand-700: #163f80;
+  --color-brand-800: #00377d;
+  --color-brand-900: #001a43;
+
+  --color-accent-400: #34c77b;
+  --color-accent-500: #00a65a;
+  --color-accent-600: #006d39;
+  --color-accent-700: #00522a;
+
+  /* Inter and JetBrains Mono load from a CDN when there is one. An exam hall
+     on an isolated LAN falls through to the platform's own UI font rather than
+     blocking on a request that will never resolve. */
+  --font-sans:
+    'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas,
+    'Courier New', monospace;
+}
+
+/* Motion. One easing curve and three durations, so nothing in the app animates
+   at a speed nothing else uses. */
+:root {
+  --ease: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 300ms;
+}
+
+/* Semantic surface tokens, themed for light and dark.
+
+   Depth comes from tonal layers and 1px outlines rather than heavy shadows:
+   a bordered, flat surface keeps the UI quiet during a timed exam. Shadows are
+   reserved for things that genuinely float — modals, popovers, dropdowns. */
+:root {
+  --surface: #ffffff;
+  --surface-2: #f7f8fc;
+  --surface-3: #eceef6;
+  --border: #dcdfea;
+  --border-strong: #c3c6d3;
+  --text: #1a1b21;
+  --text-muted: #434751;
+  --text-faint: #737782;
+
+  --ok: #00753d;
+  --ok-bg: #d7f7e4;
+  --bad: #ba1a1a;
+  --bad-bg: #ffdad6;
+  --warn: #a15c07;
+  --warn-bg: #fdefd3;
+  --info: #0e4491;
+  --info-bg: #d8e2ff;
+
+  --shadow-sm: 0 1px 2px rgb(16 20 40 / 0.05);
+  --shadow-md: 0 4px 14px -4px rgb(16 20 40 / 0.12);
+  --shadow-lg: 0 18px 44px -14px rgb(16 20 40 / 0.26);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface: #171922;
+    --surface-2: #111319;
+    --surface-3: #232735;
+    --border: #2b3040;
+    --border-strong: #3b4256;
+    --text: #e9ebf4;
+    --text-muted: #a8aec2;
+    --text-faint: #79809a;
+
+    --ok: #5bdf8c;
+    --ok-bg: #0d2a1a;
+    --bad: #ff8f87;
+    --bad-bg: #3a1717;
+    --warn: #ffb95c;
+    --warn-bg: #34260c;
+    --info: #aec6ff;
+    --info-bg: #142544;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 4px 14px -4px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 18px 44px -14px rgb(0 0 0 / 0.65);
+  }
+}
+
+:root[data-theme='dark'] {
+  --surface: #171922;
+  --surface-2: #111319;
+  --surface-3: #232735;
+  --border: #2b3040;
+  --border-strong: #3b4256;
+  --text: #e9ebf4;
+  --text-muted: #a8aec2;
+  --text-faint: #79809a;
+
+  --ok: #5bdf8c;
+  --ok-bg: #0d2a1a;
+  --bad: #ff8f87;
+  --bad-bg: #3a1717;
+  --warn: #ffb95c;
+  --warn-bg: #34260c;
+  --info: #aec6ff;
+  --info-bg: #142544;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 14px -4px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 18px 44px -14px rgb(0 0 0 / 0.65);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+::selection {
+  background: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+/* ---------------------------------------------------------------------------
+   Component primitives
+   --------------------------------------------------------------------------- */
+@layer components {
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition:
+      border-color var(--dur) var(--ease),
+      box-shadow var(--dur) var(--ease),
+      transform var(--dur) var(--ease);
+  }
+
+  /* Opt-in lift, for cards that are themselves a link or a button. */
+  .card-interactive {
+    cursor: pointer;
+  }
+  .card-interactive:hover {
+    border-color: var(--color-brand-400);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .card-interactive:active {
+    transform: translateY(0);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 6px;
+    padding: 0.5rem 0.95rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      border-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease),
+      box-shadow var(--dur-fast) var(--ease),
+      transform var(--dur-fast) var(--ease),
+      opacity var(--dur-fast) var(--ease);
+    white-space: nowrap;
+  }
+  /* A press should feel like a press. Kept to 1px so it reads as feedback
+     rather than as the layout moving. */
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+
+  .btn-primary {
+    background: var(--color-brand-600);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-brand-700);
+    box-shadow: 0 2px 10px -2px rgb(31 78 156 / 0.5);
+  }
+
+  .btn-accent {
+    background: var(--color-accent-600);
+    color: #fff;
+  }
+  .btn-accent:hover:not(:disabled) {
+    background: var(--color-accent-500);
+    box-shadow: 0 2px 10px -2px rgb(0 166 90 / 0.45);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-3);
+    border-color: var(--text-faint);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--bad);
+    border-color: var(--bad);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--bad-bg);
+  }
+
+  /* Solid destructive, for the one action that ends an exam. */
+  .btn-danger-solid {
+    background: var(--bad);
+    color: #fff;
+  }
+  .btn-danger-solid:hover:not(:disabled) {
+    filter: brightness(1.08);
+    box-shadow: 0 2px 10px -2px rgb(186 26 26 / 0.5);
+  }
+
+  .btn-sm {
+    padding: 0.32rem 0.65rem;
+    font-size: 0.8rem;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    width: 100%;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    transition:
+      border-color var(--dur-fast) var(--ease),
+      box-shadow var(--dur-fast) var(--ease);
+  }
+  .input:hover:not(:disabled),
+  .select:hover:not(:disabled),
+  .textarea:hover:not(:disabled) {
+    border-color: var(--text-faint);
+  }
+  /* An offset ring rather than an outline, so focus reads clearly against both
+     the light page and the dark editor chrome. */
+  .input:focus,
+  .select:focus,
+  .textarea:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 28%, transparent);
+  }
+  .textarea {
+    font-family: var(--font-mono);
+    resize: vertical;
+  }
+
+  .label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+    letter-spacing: 0.01em;
+  }
+
+  .hint {
+    font-size: 0.76rem;
+    color: var(--text-faint);
+    margin-top: 0.3rem;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .badge-ok {
+    background: var(--ok-bg);
+    color: var(--ok);
+  }
+  .badge-bad {
+    background: var(--bad-bg);
+    color: var(--bad);
+  }
+  .badge-warn {
+    background: var(--warn-bg);
+    color: var(--warn);
+  }
+  .badge-info {
+    background: var(--info-bg);
+    color: var(--info);
+  }
+  .badge-muted {
+    background: var(--surface-3);
+    color: var(--text-muted);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+
+  /* Preformatted I/O blocks in problem statements and the console. */
+  .io-block {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.55rem 0.7rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    margin: 0;
+  }
+
+  /* Small uppercase section label — "CONSTRAINTS", "SAMPLE CASES", "INPUT". */
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  /* A label above a large value, used in rows across the teacher screens. */
+  .stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .stat-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  /* Shared shell for the teacher and admin tables. */
+  .table-shell {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+  }
+  .table-shell thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+  .table-shell tbody td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-shell tbody tr {
+    transition: background-color var(--dur-fast) var(--ease);
+  }
+  .table-shell tbody tr:hover {
+    background: var(--surface-2);
+  }
+  .table-shell tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+/* Exam mode: suppress the affordances that make casual copying easy. The real
+   enforcement is server-side; this is deterrence only. */
+.exam-locked {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.exam-locked .allow-select,
+.exam-locked textarea,
+.exam-locked input {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+  background-clip: content-box;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion
+
+   Every animation here is decorative: it conveys that something arrived or
+   changed, never information the user could not otherwise get. That is what
+   makes the reduced-motion block at the bottom safe to be as blunt as it is.
+   --------------------------------------------------------------------------- */
+@keyframes cca-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes cca-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cca-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The exam timer under five minutes. Deliberately a slow breath rather than a
+   flash — a student watching a strobing clock loses the ability to think. */
+@keyframes cca-urgent {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes cca-shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.animate-fade-up {
+  animation: cca-fade-up var(--dur-slow) var(--ease) both;
+}
+.animate-fade-in {
+  animation: cca-fade-in var(--dur-slow) var(--ease) both;
+}
+.animate-scale-in {
+  animation: cca-scale-in var(--dur) var(--ease) both;
+}
+.animate-urgent {
+  animation: cca-urgent 1.6s ease-in-out infinite;
+}
+
+/* Staggers a list so rows arrive in sequence rather than all at once. Capped at
+   eight: past that the last row waits long enough to feel like a bug. */
+.stagger > * {
+  animation: cca-fade-up var(--dur-slow) var(--ease) both;
+}
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+.stagger > *:nth-child(6) {
+  animation-delay: 200ms;
+}
+.stagger > *:nth-child(7) {
+  animation-delay: 240ms;
+}
+.stagger > *:nth-child(n + 8) {
+  animation-delay: 280ms;
+}
+
+/* Loading placeholder that matches the shape of what is coming. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-3) 25%,
+    color-mix(in srgb, var(--surface-3) 55%, var(--surface)) 50%,
+    var(--surface-3) 75%
+  );
+  background-size: 200% 100%;
+  animation: cca-shimmer 1.4s linear infinite;
+  border-radius: 6px;
+}
+
+/*
+ * Honour the OS setting. Motion sickness and vestibular disorders are real, and
+ * an exam is the worst possible place to trigger one.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card-interactive:hover {
+    transform: none;
+  }
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
+}
