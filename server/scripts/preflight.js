@@ -131,6 +131,38 @@ async function checkJudge() {
   } catch (err) {
     fail('Judge0 sandbox executes', err.message);
   }
+
+  /*
+   * Is the judge reachable from outside this machine?
+   *
+   * Judge0's shipped compose publishes 2358 on 0.0.0.0. That puts a service
+   * whose entire purpose is executing arbitrary code onto the network, with no
+   * login and no allowlist in front of it — a far bigger hole than anything the
+   * exam itself could leak. The fix is a one-line change to the ports mapping
+   * (see DEPLOYMENT.md §3), so it is worth checking rather than trusting.
+   */
+  if (base && /^https?:\/\/(127\.0\.0\.1|localhost)/.test(base)) {
+    try {
+      const { execSync } = await import('node:child_process');
+      const out = execSync('ss -tln 2>/dev/null || netstat -an 2>/dev/null', {
+        encoding: 'utf8',
+        timeout: 5000,
+      });
+      const line = out.split('\n').find((l) => /[:.]2358\b/.test(l) && /LISTEN/i.test(l));
+      if (line && /0\.0\.0\.0:2358|\*:2358|\[::\]:2358/.test(line)) {
+        fail(
+          'Judge0 not exposed',
+          'listening on 0.0.0.0:2358 — anyone who can reach this machine can execute arbitrary code. Bind it to 127.0.0.1 (DEPLOYMENT.md §3).'
+        );
+      } else if (line) {
+        ok('Judge0 not exposed', 'bound to localhost only');
+      } else {
+        warn('Judge0 not exposed', 'could not read the listening socket — check `ss -tln | grep 2358` by hand.');
+      }
+    } catch {
+      warn('Judge0 not exposed', 'could not check automatically — run `ss -tln | grep 2358` and confirm it says 127.0.0.1.');
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------

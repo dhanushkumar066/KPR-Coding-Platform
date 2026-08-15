@@ -111,10 +111,29 @@ unzip judge0-v1.13.1.zip && cd judge0-v1.13.1
 
 # Set REDIS_PASSWORD and POSTGRES_PASSWORD in judge0.conf — it will not start
 # with them blank. Set AUTH_TOKEN too and copy it into the app's JUDGE0_TOKEN.
+```
 
+**Now bind it to localhost, before you start it.** The shipped
+`docker-compose.yml` publishes port 2358 on `0.0.0.0`, which puts a service that
+executes arbitrary code on the college network. Anyone who can reach the server
+could POST a program to it and have it run — no login, no allowlist, nothing.
+Change the ports line:
+
+```yaml
+# docker-compose.yml, under the `server` service
+ports:
+  - "127.0.0.1:2358:2358"      # not "2358:2358"
+```
+
+Then start it:
+
+```bash
 docker compose up -d db redis
 sleep 15
 docker compose up -d
+
+# Confirm it is NOT listening on every interface:
+ss -tlnp | grep 2358          # want 127.0.0.1:2358, not 0.0.0.0:2358
 ```
 
 **Docker must be 26.x or older.** Docker 28+ removed cgroup v1 support and its
