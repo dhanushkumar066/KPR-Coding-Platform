@@ -19,7 +19,17 @@ const roomFor = (testId) => `proctor:${testId}`;
 
 export function initRealtime(httpServer, { clustered = false } = {}) {
   io = new Server(httpServer, {
-    cors: { origin: env.clientOrigin, credentials: true },
+    cors: {
+      /*
+       * Development accepts whatever origin the request came from, so a trial
+       * run over the local network works without editing CLIENT_ORIGIN every
+       * time the laptop's address changes. Production stays pinned to the one
+       * configured origin — the proctor feed carries live exam data, and a
+       * permissive origin there would let any page on the internet subscribe.
+       */
+      origin: env.isProd ? env.clientOrigin : true,
+      credentials: true,
+    },
     path: '/socket.io',
   });
 
