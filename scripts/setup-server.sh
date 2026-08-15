@@ -85,12 +85,25 @@ else
     fi
   }
 
+  # Only overwrite when the deployer actually typed something.
+  #
+  # Some people fill the template in first and then run this, which is a
+  # perfectly reasonable order to work in — and pressing Enter at a prompt
+  # should not silently erase what they carefully wrote. A blank ADMIN_EMAILS
+  # in particular leaves the system with no administrator and no way to make
+  # one, which is only discovered on the first sign-in attempt.
+  set_if_given() {
+    local key="$1" val="$2"
+    [[ -z "$val" ]] && { echo "${DIM}    ${key}: keeping the value already in the file${RST}"; return; }
+    set_kv "$key" "$val"
+  }
+
   set_kv NODE_ENV production
   set_kv CLIENT_ORIGIN "https://${DOMAIN}"
   set_kv JWT_SECRET "$JWT"
-  set_kv GOOGLE_CLIENT_ID "$GOOGLE_ID"
-  set_kv ALLOWED_EMAIL_DOMAIN "$MAIL_DOMAIN"
-  set_kv ADMIN_EMAILS "$ADMIN_EMAIL"
+  set_if_given GOOGLE_CLIENT_ID "$GOOGLE_ID"
+  set_if_given ALLOWED_EMAIL_DOMAIN "$MAIL_DOMAIN"
+  set_if_given ADMIN_EMAILS "$ADMIN_EMAIL"
   set_kv ALLOW_DEV_LOGIN false
   set_kv EXECUTOR judge0
   set_kv JUDGE0_URL "http://127.0.0.1:2358"
