@@ -24,6 +24,32 @@ Bind it to `127.0.0.1` and let only the app talk to it.
 
 ---
 
+## The short way
+
+Most of this guide is mechanical, and one missed line — the Judge0 port binding
+— is a security hole. So it is scripted:
+
+```bash
+git clone <your repo> /opt/kpr-exams
+cd /opt/kpr-exams
+sudo bash scripts/setup-server.sh
+```
+
+It asks for the two things only you know — your domain and your Google OAuth
+client id — and does the rest: generates a real JWT secret on the machine that
+will use it, turns dev login off, binds Judge0 to localhost, installs the
+systemd unit and an nginx site that proxies websockets, then runs preflight.
+
+Two things it deliberately leaves to you, because they need decisions it cannot
+make: **certbot** for TLS, and adding your domain to the Google console.
+
+Safe to run twice; it never overwrites an existing `server/.env`.
+
+The sections below are the same steps by hand, and the reasoning behind each —
+worth reading when something does not fit your setup.
+
+---
+
 ## 1. The machine
 
 - **Ubuntu 22.04 LTS.** Not 24.04. See §3 — Judge0's sandbox needs cgroup v1,
