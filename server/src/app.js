@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -18,6 +21,8 @@ import testRoutes from './routes/tests.js';
 import examRoutes from './routes/exam.js';
 import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function createApp() {
   const app = express();
@@ -91,6 +96,32 @@ export function createApp() {
   app.use('/api/admin', adminRoutes);
 
   app.use('/api', notFound);
+
+  /*
+   * Serve the built client, when there is one.
+   *
+   * A production deployment normally puts nginx in front, and nginx serves
+   * these files faster than Node will. This exists for the hosts that give you
+   * a single process and no nginx — Render, Railway, Fly and the like — where
+   * the alternative is deploying the front end and the API as two services on
+   * two domains.
+   *
+   * That split is worse than it looks: the session cookie is SameSite=lax, so
+   * the browser would refuse to send it from a front end on one domain to an
+   * API on another, and every request would arrive signed-out. Serving both
+   * from one origin sidesteps it entirely rather than weakening the cookie.
+   *
+   * Skipped silently when the client has not been built, so the API alone
+   * still runs in development.
+   */
+  const clientDist = path.resolve(__dirname, '../../client/dist');
+  if (existsSync(path.join(clientDist, 'index.html'))) {
+    app.use(express.static(clientDist, { index: false, maxAge: '1h' }));
+    // Anything not an API route is a client route — React Router owns it, so
+    // hand back index.html and let the browser resolve it.
+    app.get('*', (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+  }
+
   app.use(errorHandler);
 
   return app;
