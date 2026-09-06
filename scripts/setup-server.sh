@@ -50,6 +50,60 @@ fi
 timedatectl set-ntp true 2>/dev/null || warn "Could not enable NTP. Every exam deadline depends on this clock."
 
 # ---------------------------------------------------------------------------
+say "Installing what the server needs"
+# ---------------------------------------------------------------------------
+# A fresh Ubuntu box has none of this. Two of the versions are pinned on
+# purpose: node 20 because the engines field requires it, and docker 26 because
+# 28 and later dropped cgroup v1, which Judge0's sandbox still needs.
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+
+if ! command -v node >/dev/null || [[ "$(node -v 2>/dev/null | cut -c2-3)" -lt 20 ]]; then
+  say "  node 20"
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null 2>&1
+  apt-get install -y -qq nodejs >/dev/null
+fi
+echo "${DIM}    node $(node -v 2>/dev/null)${RST}"
+
+if ! command -v mongod >/dev/null; then
+  say "  mongodb 7"
+  curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
+    | gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor 2>/dev/null
+  echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu ${VERSION_CODENAME:-jammy}/mongodb-org/7.0 multiverse" \
+    > /etc/apt/sources.list.d/mongodb-org-7.0.list
+  apt-get update -qq && apt-get install -y -qq mongodb-org >/dev/null
+  systemctl enable --now mongod >/dev/null 2>&1
+fi
+systemctl is-active --quiet mongod \
+  && echo "${DIM}    mongodb running${RST}" \
+  || warn "mongod is not running — check: systemctl status mongod"
+
+if ! command -v docker >/dev/null; then
+  say "  docker 26 (Judge0 needs cgroup v1, which 28+ dropped)"
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc 2>/dev/null
+  chmod a+r /etc/apt/keyrings/docker.asc
+  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME:-jammy} stable" \
+    > /etc/apt/sources.list.d/docker.list
+  apt-get update -qq
+  DV="$(apt-cache madison docker-ce 2>/dev/null | awk '{print $3}' | grep -E '^5:26\.' | head -1)"
+  if [[ -n "$DV" ]]; then
+    apt-get install -y -qq docker-ce="$DV" docker-ce-cli="$DV" containerd.io docker-compose-plugin >/dev/null
+  else
+    warn "No docker 26 for this release; installing the newest available."
+    warn "If Judge0's sandbox then fails on every submission, this is the reason."
+    apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null
+  fi
+  systemctl enable --now docker >/dev/null 2>&1
+fi
+echo "${DIM}    $(docker --version 2>/dev/null || echo 'docker missing')${RST}"
+
+command -v nginx   >/dev/null || { say "  nginx"; apt-get install -y -qq nginx >/dev/null; }
+command -v certbot >/dev/null || apt-get install -y -qq certbot python3-certbot-nginx >/dev/null
+command -v unzip   >/dev/null || apt-get install -y -qq unzip >/dev/null
+command -v git     >/dev/null || apt-get install -y -qq git >/dev/null
+
+# ---------------------------------------------------------------------------
 say "What only you know"
 # ---------------------------------------------------------------------------
 read -rp "    Domain students will use (e.g. exams.kpriet.ac.in): " DOMAIN
