@@ -53,9 +53,13 @@ Share the link. Ctrl+C ends it.
 
 ---
 
-## Path B — a real server, about an hour
+## Path B — a real server
 
-For a class. Roughly Rs 380/month.
+For a class. **About an hour to set up, once. Roughly Rs 380 per month to run.**
+
+Billing is hourly against that monthly cap, so a server you create for a
+three-day trial and then delete costs about Rs 40, not Rs 380. You can put it up
+for a demo, delete it, and create it again when the college is ready.
 
 ### 1. The machine
 
