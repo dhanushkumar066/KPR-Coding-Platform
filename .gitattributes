@@ -1,0 +1,19 @@
+# Shell scripts must keep Unix line endings.
+#
+# Git on Windows converts checked-out files to CRLF by default. A shell script
+# with CRLF fails on Linux at its first loop or conditional:
+#
+#   syntax error near unexpected token $'do\r'
+#
+# which reads like a broken script rather than a line-ending problem. These are
+# the deployment scripts, so the failure would land on a fresh server, at the
+# worst moment, on someone's first attempt.
+*.sh text eol=lf
+
+# Same reasoning for anything else read by a Linux tool rather than an editor.
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Let git handle the rest normally.
+* text=auto

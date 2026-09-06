@@ -1,7 +1,6 @@
 import http from 'node:http';
 import cluster from 'node:cluster';
 import os from 'node:os';
-import { setupMaster, setupWorker } from '@socket.io/sticky';
 import { setupPrimary } from '@socket.io/cluster-adapter';
 import { env, assertProductionSafety } from './config/env.js';
 import { connectDb } from './config/db.js';
@@ -46,30 +45,39 @@ const WORKERS = (() => {
   return Math.max(1, Math.min(os.cpus().length - 1, 16));
 })();
 
-/** The primary binds the port, balances connections and owns nothing else. */
+/** The primary forks the workers and owns nothing else. */
 function startPrimary() {
-  const server = http.createServer();
-
-  // Least-connection rather than round-robin: exam requests are not uniform —
-  // a submit costs far more than a heartbeat — so counting open connections
-  // spreads real work better than counting arrivals.
-  setupMaster(server, { loadBalancingMethod: 'least-connection' });
+  /*
+   * Round-robin, with every worker binding the port itself.
+   *
+   * This used to route through @socket.io/sticky, which pins a client IP to one
+   * worker so Socket.IO's HTTP long-polling always reaches the process holding
+   * that session. Correct for polling, and completely wrong here: a hall of
+   * students sits behind one NAT gateway, so the entire class shares a single
+   * public IP and every one of them is routed to the same worker. Measured on
+   * this machine — 30 parallel connections, one worker, the rest idle. The
+   * clustering did nothing in the one situation it was added for.
+   *
+   * Stickiness is only needed because of polling. A websocket is a single
+   * persistent connection, so the proctor feed is websocket-only now (see
+   * services/realtime.js) and plain round-robin can spread the load properly.
+   */
+  cluster.setupPrimary({
+    schedulingPolicy: cluster.SCHED_RR,
+    // Structured clone for the inter-worker channel, so the adapter can relay
+    // payloads without re-encoding them.
+    serialization: 'advanced',
+  });
   setupPrimary();
 
-  // Structured clone rather than JSON for the inter-worker channel, so the
-  // adapter can pass binary payloads without re-encoding them.
-  cluster.setupPrimary({ serialization: 'advanced' });
-
-  server.listen({ port: env.port, backlog: env.listenBacklog }, () => {
-    console.log(`[server] listening on http://localhost:${env.port} (${env.nodeEnv})`);
-    console.log(`[server] ${WORKERS} workers on ${os.cpus().length} cores`);
-    console.log(`[server] executor: ${env.executor}`);
-    if (env.executor === 'local') {
-      console.warn(
-        '[server] WARNING: the "local" executor runs student code on this machine with no sandbox. Development only.'
-      );
-    }
-  });
+  console.log(`[server] listening on http://localhost:${env.port} (${env.nodeEnv})`);
+  console.log(`[server] ${WORKERS} workers on ${os.cpus().length} cores`);
+  console.log(`[server] executor: ${env.executor}`);
+  if (env.executor === 'local') {
+    console.warn(
+      '[server] WARNING: the "local" executor runs student code on this machine with no sandbox. Development only.'
+    );
+  }
 
   for (let i = 0; i < WORKERS; i += 1) cluster.fork();
 
@@ -91,13 +99,13 @@ function startPrimary() {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
-/** A worker never binds the port — the primary hands it connections. */
+/** Every worker binds the same port; the OS deals each connection to one. */
 async function startWorker() {
   await connectDb();
 
   const app = createApp();
   const server = http.createServer(app);
-  const io = initRealtime(server, { clustered: true });
+  initRealtime(server, { clustered: true });
 
   if (cluster.worker.id === 1) {
     await recoverPendingSubmissions().catch((err) =>
@@ -108,8 +116,9 @@ async function startWorker() {
   server.keepAliveTimeout = 30_000;
   server.headersTimeout = 35_000;
 
-  setupWorker(io);
-  console.log(`[server] worker ${process.pid} ready`);
+  server.listen({ port: env.port, backlog: env.listenBacklog }, () => {
+    console.log(`[server] worker ${process.pid} ready`);
+  });
 }
 
 /** Single process: the old path, kept for development and small deployments. */

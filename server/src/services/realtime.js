@@ -31,6 +31,22 @@ export function initRealtime(httpServer, { clustered = false } = {}) {
       credentials: true,
     },
     path: '/socket.io',
+
+    /*
+     * Websocket only, no HTTP long-polling fallback.
+     *
+     * Polling is the sole reason a clustered Socket.IO needs sticky sessions —
+     * its repeated requests must all reach the worker holding that session. The
+     * stickiness is keyed on client IP, and a hall of students behind one NAT
+     * gateway shares a single IP, so the entire class would land on one worker
+     * while the rest sat idle. Dropping polling lets plain round-robin spread
+     * them properly.
+     *
+     * The cost is that a network blocking websockets loses the live proctor
+     * feed. That feed is a teacher's convenience, not something the exam
+     * depends on: students still sit, submit and are graded without it.
+     */
+    transports: ['websocket'],
   });
 
   // Across workers, an event emitted by whichever worker handled a student's

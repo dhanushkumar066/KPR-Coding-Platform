@@ -8,7 +8,9 @@ let socket = null;
  */
 export function getSocket() {
   if (!socket) {
-    socket = io({ path: '/socket.io', withCredentials: true, transports: ['websocket', 'polling'] });
+    // Websocket only — see the server's realtime.js. Polling would need
+    // sticky sessions, which route a whole hall behind one NAT to one worker.
+    socket = io({ path: '/socket.io', withCredentials: true, transports: ['websocket'] });
   }
   return socket;
 }
