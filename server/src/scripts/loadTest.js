@@ -1,4 +1,15 @@
 import mongoose from 'mongoose';
+
+/**
+ * The per-worker execution figures.
+ *
+ * /api/health nests these under `worker` now — the top-level number is
+ * `pendingSubmissions`, counted across every worker, because reading one
+ * worker's queue off a twelve-worker box and calling it the backlog is wrong by
+ * an order of magnitude. Accepts the older flat shape too.
+ */
+const execStats = (health) =>
+  health?.worker?.execution || health?.execution || { active: 0, queued: 0, peakActive: 0, peakQueued: 0, max: 0 };
 import { connectDb } from '../config/db.js';
 import { User } from '../models/User.js';
 import { Test } from '../models/Test.js';
@@ -239,7 +250,7 @@ async function main() {
       const health = await fetch(`${BASE}/health`).then((r) => r.json()).catch(() => null);
       console.log(
         `    ${Math.round(elapsed / 1000)}s  pending=${pending}` +
-          (health ? `  active=${health.execution.active} queued=${health.execution.queued}` : '')
+          (health ? `  active=${execStats(health).active} queued=${execStats(health).queued}` : '')
       );
     }
     await new Promise((r) => setTimeout(r, 500));
@@ -269,8 +280,8 @@ async function main() {
   const health = await fetch(`${BASE}/health`).then((r) => r.json()).catch(() => null);
   if (health) {
     console.log(
-      `  peak concurrent executions: ${health.execution.peakActive} (limit ${health.execution.max}), ` +
-        `peak queue depth: ${health.execution.peakQueued}`
+      `  peak concurrent executions: ${execStats(health).peakActive} (limit ${execStats(health).max}), ` +
+        `peak queue depth: ${execStats(health).peakQueued}`
     );
   }
 
